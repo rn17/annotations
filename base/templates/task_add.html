@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block body %}
+
+    <div class="container">
+        <h3>Choose secondary files number</h3>
+
+        <form method="get" action="{% url "base:add_task" %}">
+            <select name="num" onchange="this.form.submit()">
+                {% for foo in f_num_list %}
+                    <option {% if foo|slugify == num|slugify %}selected{% endif %} value={{ foo }}>{{ foo }}</option>
+                {% endfor %}
+            </select>
+        </form>
+
+
+        <br>
+
+        <h3>Load xml files</h3>
+        <form action="{% url "base:add_task" %}?num={{ num }}" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            {% if form.errors %}
+                <h5 style="background-color: lightsalmon">Errors: {{ form.errors }}</h5>
+            {% endif %}
+
+            {% for field in form.visible_fields %}
+                {% if field.name == 'mf' %}
+                    <div class="fieldWrapper" style="background-color: lightblue; padding: 10px">
+                {% else %}
+                    <div class="fieldWrapper" style="padding: 10px">
+                {% endif %}
+
+                    {{ field.label_tag }}
+                    {% if field.errors %}
+                        <div style="background-color: lightsalmon">{{ field.errors }}</div>
+                    {% endif %}
+                    {{ field }}
+
+                    {% for hidden in field.hidden_fields %}
+                        {{ hidden }}
+                    {% endfor %}
+                </div>
+            {% endfor %}
+{#            {% for field in form %}#}
+{#                <h5>{{ field.errors }}: {{ field.label_tag }}</h5>#}
+{#            {% endfor %}#}
+            <input class="btn btn-success" type="submit" value="submit" />
+        </form>
+    </div>
+{% endblock %}

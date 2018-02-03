@@ -1,0 +1,337 @@
+{% extends 'base.html' %}
+
+{% load static %}
+{% load staticfiles %}
+
+{% block styles %}
+    {{ block.super }}
+    <link rel="stylesheet" type="text/css" href={% static "annotate.css" %}>
+    <script src="{% static "jquery.js" %}"></script>
+
+{% endblock %}
+
+{% block body %}
+
+    <script type="text/javascript">
+
+{#    var xmlxml = "xmlxml.xml";#}
+{#    var xmlxml = "{{ secondary_xmls.0.sec_name }}";#}
+    var currentlyActiveXml = '';
+
+    function buildTagString(xml, tag) {
+        return xml + ":" + tag;
+    }
+    
+    function tagClick(xml, annotationTag) {
+{#   TODO     annotationTag.stopPropagation();#}
+        console.log("tag clicked!");
+
+        var tagStringToFind = annotationTag.innerHTML;
+        openTab(xml);
+
+        var secActiveTab = document.getElementById("tab_"+currentlyActiveXml);
+        var secCells = secActiveTab.getElementsByClassName("secCell");
+        for(var i=0; i<secCells.length; i++){
+            if (tagStringToFind === buildTagString(xml, getCellTagOrNull(secCells[i]))){
+                var tableOffsetTop = secCells[0].offsetTop;
+                var ot = secCells[i].offsetTop;
+                document.getElementById("id_table_"+currentlyActiveXml).scrollTo(0, ot - tableOffsetTop);
+                return;
+            }
+        }
+        console.error("not found tag: won't scroll")
+    }
+
+    function createAndAppendTag(cell, xml, tag) {
+        var newElement = document.createElement("h5");
+        newElement.className = "annTag";
+        newElement.innerHTML = buildTagString(xml, tag);
+{#        newElement.addEventListener("click", tagClick, false);#}
+        newElement.onclick = function () { tagClick(xml, newElement) };
+
+        var lineToAppend = cell.getElementsByClassName("assigned");
+        lineToAppend[0].appendChild(newElement);
+    }
+
+    function getMainSelectedCell() {
+        var mainSelected = document.getElementsByClassName("selected_row");
+        if (mainSelected.length === 1)
+            return mainSelected[0];
+        else if (mainSelected.length === 0)
+            return null;
+        else
+            console.error("many main selected");
+    }
+
+    function getCellTagOrNull(cell) {
+        var elements = cell.getElementsByClassName("cellTag");
+        if (elements.length === 1)
+            return elements[0].innerHTML;
+        else if (elements.length === 0)
+            return null;
+        else
+            console.error("too many cell tags in one cell")
+    }
+
+    function mainCellClick(mainCellClickedId) {
+        console.log('clicked! ' + mainCellClickedId);
+        var mainCells = document.getElementsByClassName("mainCell");
+        for(var i=0; i<mainCells.length; i++)
+        {
+            if (mainCells[i].id === mainCellClickedId)
+                mainCells[i].className = "mainCell" + " " + "selected_row";
+            else
+                mainCells[i].className = "mainCell" + " " + "not_selected_row";
+        }
+
+        recolorSecondaryTable();
+    }
+
+    function secCellClick(secCellClickedId) {
+        console.log('clicked! ' + secCellClickedId);
+        var mainSelected = getMainSelectedCell();
+
+        if (mainSelected === null)
+            return;
+
+        var secClickedCell = document.getElementById(secCellClickedId);
+        var secClickedTag = getCellTagOrNull(secClickedCell);
+        if (secClickedTag === null)
+            return;
+
+        var addedBool = tryToRemoveOrAppendTag(mainSelected, currentlyActiveXml, secClickedTag);
+
+        recolorSecondaryTable();
+    }
+
+    function recolorSecondaryTable() {
+
+        var allTabs = document.getElementsByClassName("tab_class");
+
+        var secCells = document.getElementsByClassName("secCell");
+        var mainSelected = getMainSelectedCell();
+
+        if (mainSelected === null){
+            for (var i = 0; i < secCells.length; i++) {
+                secCells[i].className = "secCell" + " " + "not_selected_row";
+            }
+        } else {
+            var tags = getAttachedTagsAsText(mainSelected);
+
+            for (var t=0; t<allTabs.length; t++) {
+                var t_xml = allTabs[t].id.substring(4);
+                console.log("RECOLOR(substr) " + t_xml);
+                var innerSecCells = allTabs[t].getElementsByClassName("secCell");
+                for (var i = 0; i < innerSecCells.length; i++) {
+                    var secCellTag = getCellTagOrNull(innerSecCells[i]);
+                    if (secCellTag !== null && tags.includes(buildTagString(t_xml, secCellTag)))
+                        innerSecCells[i].className = "secCell" + " " + "selected_row_222";
+                    else
+                        innerSecCells[i].className = "secCell" + " " + "not_selected_row";
+                }
+            }
+        }
+    }
+
+    function getAttachedTagsAsText(selected) {
+        var tagsCollector = selected.getElementsByClassName("assigned")[0];
+
+        var toReturn = [];
+        var tagContainers = tagsCollector.getElementsByClassName("annTag");
+        for (var i = 0; i < tagContainers.length; i++) {
+            toReturn.push(tagContainers[i].innerHTML);
+        }
+
+{#        console.log("AttachedTags: " + toReturn);#}
+
+        return toReturn;
+{#        var tagsText = tagsCollector.innerHTML;#}
+{#        return tagsText.split(' ');#}
+    }
+
+    function tryToRemoveOrAppendTag(selected, xml, tag) {
+        var tagsCollector = selected.getElementsByClassName("assigned")[0];
+
+        var tagToFind = xml + ":" + tag;
+        var hasAttachedTags = getAttachedTagsAsText(selected);
+        var ii = hasAttachedTags.findIndex(function(currentValue){return tagToFind === currentValue});
+
+        if (ii === -1){
+            createAndAppendTag(selected, xml, tag);
+            return true;
+        } else {
+            var tagContainers = tagsCollector.getElementsByClassName("annTag");
+            var toBeRemoved = tagContainers[ii];
+            tagsCollector.removeChild(toBeRemoved);
+            return false;
+        }
+
+    }
+
+    function postRequestAcceptAnnotation(){
+
+        var postURL = "{% url 'base:submit_annotation' %}";
+        var mainCells = document.getElementsByClassName("mainCell");
+
+        var requestData = {};
+        for (var i = 0; i < mainCells.length; i++) {
+
+            var mainCellTag = getCellTagOrNull(mainCells[i]);
+
+            if (mainCellTag !== null) {
+                var attachedTags = getAttachedTagsAsText(mainCells[i]);
+                if (attachedTags.length === 0)
+                    attachedTags = ['{{ empty_tag }}'];
+                requestData[mainCellTag] = attachedTags;
+            }
+        }
+{#                    var request_data = {'a1': tags, 'ln': 16};#}
+        console.log(requestData);
+        console.log("Ready to send post...");
+
+
+{#                    if (typeof jQuery != 'undefined') {#}
+{#                        // jQuery is loaded => print the version#}
+{#                        alert(jQuery.fn.jquery);#}
+{#                    }#}
+{#                    alert("nonono");#}
+
+
+        $.ajax({
+{#                        headers: {#}
+{#                            'Content-Type':'application/json'#}
+{#                        },#}
+            type: "POST",
+            url: '{{ hostport }}/tasks/inner_submit_annotation/',
+            data: requestData,
+            success: function(response) {
+                console.log("I'm trying to process response");
+                if (response === 'success') {
+                    alert('Annotation processed successfully!');
+                    window.location.href = "{% url 'base:task_list_view' %}";
+                }
+                else {
+                    if (response.includes('Please login to see this page'))
+                        alert("Error! Please login to see this page");
+                    else
+                        alert('Error! ' + response  );
+                }
+            },
+            error:  function(jqXHR, textStatus, errorThrown) {
+                console.log("Error is coming");
+                alert("Error, status = " + textStatus + ", " +
+                      "error thrown: " + errorThrown
+                );
+            },
+            dataType: "text",       {# Response type #}
+            method: "POST",
+            traditional: true
+        });
+    }
+    
+    function openTab(secondary_name) {
+        var i;
+        var x = document.getElementsByClassName("tab_class");
+        for (i = 0; i < x.length; i++) {
+            x[i].style.display = "none";
+        }
+        document.getElementById("tab_"+secondary_name).style.display = "block";
+        currentlyActiveXml = secondary_name;
+        console.log("ACTIVE: " + currentlyActiveXml);
+
+        var allPills = document.getElementsByClassName("pill_li");
+        for (var j=0; j<allPills.length; j++){
+            allPills[j].className = "pill_li"
+        }
+
+        var activePill = document.getElementById("pill_" + currentlyActiveXml);
+        activePill.className = "pill_li active";
+    }
+
+    </script>
+
+    <div class="container">
+
+        <div>
+
+{#            <div class="col-xs-6 left_collector">#}
+            <div class="left_collector">
+                <h4>{{ main_xml_name }}</h4>
+                <div class="main_xml_table" id="table1">
+                    {% for e in main_xml_content %}
+                        <div class="mainCell not_selected_row" id="row_table_{{forloop.counter}}"
+                             onclick="mainCellClick(this.id)">
+                            {% if 'label' in e %}
+                                <div class="tagsContainer">
+
+                                    <h5 class="cellTag">{{ e.label }}</h5>
+                                    <div class="assigned">Tags:</div>
+
+                                </div>
+                            {% endif %}
+                            <div id="paragraph_container">
+                                <h5>{{ e.txt }}</h5>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+{#            <div class="col-xs-6 right_collector">#}
+            <div class="right_collector">
+
+                 <ul class="nav nav-pills">
+                     {% for sec_pair in secondary_xmls %}
+                         <li class="pill_li" id="pill_{{ sec_pair.sec_name }}"><a onclick="openTab('{{ sec_pair.sec_name }}')">{{ sec_pair.sec_name }}</a></li>
+    {#                     <li onclick="openTab('{{ sec_pair.sec_name }}')">{{ sec_pair.sec_name }}</li>#}
+    {#                     <button onclick="openTab('{{ sec_pair.sec_name }}')">{{ sec_pair.sec_name }}</button>#}
+                     {% endfor %}
+                 </ul>
+            <br/>
+
+                {% for sec_pair in secondary_xmls %}
+                <div id="tab_{{ sec_pair.sec_name }}" class="tab_class">
+
+    {#       TODO unique id     #}
+                    <div class="secondary_xml_table" id="id_table_{{ sec_pair.sec_name }}">
+                        {% for e in sec_pair.sec_content %}
+                            <div class="secCell not_selected_row" id="id_row_sec_{{ sec_pair.sec_name }}_{{forloop.counter}}"
+                                 onclick="secCellClick(this.id)">
+                                {% if 'label' in e %}
+                                    <div style="background-color: #c7ddef">
+
+                                        <h5 class="cellTag">{{ e.label }}</h5>
+
+                                    </div>
+                                {% endif %}
+                                <div id="paragraph_container">
+                                    <h5>{{ e.txt }}</h5>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                </div>
+                {% endfor %}
+
+
+
+            </div>
+
+        </div>
+
+        <div style="text-align: center;">
+            <input class="btn btn-success" style="font-size: 150%;" type="button" value="Submit" id="button_submit" onclick="postRequestAcceptAnnotation()"/>
+        </div>
+
+    </div>
+
+
+
+    <script>
+        openTab("{{ secondary_xmls.0.sec_name }}")
+    </script>
+
+
+
+{% endblock %}

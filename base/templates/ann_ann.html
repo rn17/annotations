@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+
+{% load static %}
+{% load staticfiles %}
+
+{% block body %}
+
+    <div class="container">
+
+        <div class="row">
+            <h3>Calculate Inter-annotators agreement</h3>
+        </div>
+
+        <div class="form-row">
+            {% if upload_form.errors %}
+                <h5 style="background-color: #eea236">Errors</h5>
+            {% endif %}
+            <form action="" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                {{ upload_form }}
+                <br>
+                <input type="submit" value="Upload" class="btn btn-success" />
+            </form>
+        </div>
+
+        {% if kappa and kappa2 and jaccard %}
+            <div class="row">
+                <div class="col-lg-2">
+                    Kappa {{ kappa }}
+                </div>
+                <div class="col-lg-2">
+                    Kappa2 {{ kappa2 }}
+                </div>
+                <div class="col-lg-2">
+                    Jaccard {{ jaccard }}
+                </div>
+            </div>
+        {% endif %}
+
+    </div>
+
+{% endblock %}

@@ -1,0 +1,215 @@
+{% extends 'base.html' %}
+
+{% load static %}
+{% load staticfiles %}
+
+{% block styles %}
+    {{ block.super }}
+    <link rel="stylesheet" type="text/css" href={% static "metrics.css" %}>
+
+{% endblock %}
+
+{% block body %}
+
+    <div class="container">
+
+        <div class="row">
+            <h3>Build chart of precision/recall</h3>
+        </div>
+
+        <div class="form-row">
+            {% if file_form.errors %}
+                <h5 style="background-color: #eea236">Errors</h5>
+            {% endif %}
+
+            <form action="" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                {{ file_form }}
+                <br>
+                <input class="btn btn-success" type="submit" value="Upload" />
+            </form>
+        </div>
+        {% if f_score %}
+            <div class="row">
+                <h5>Best f_score: {{ f_score|floatformat:4 }}</h5>
+            </div>
+        {% endif %}
+        {% if chart_file %}
+            <div class="row">
+                <h5> Download chart stats
+                <a href="{{ hostport }}/{{ chart_file }}"><span class="glyphicon glyphicon-floppy-disk" aria-hidden="true"></span></a></li>
+                </h5>
+
+                <div class="tbl" style="max-width: 800px; text-align: right">
+                    <h5 id="myid" style="background-color: yellow; text-align: left">X</h5>
+                    <h5>All aggregations - by right Y axis</h5>
+                    <h5>All metrics - by left Y axis</h5>
+                </div>
+            </div>
+        {% endif %}
+        <div class="row" id="chart_div">
+
+        </div>
+
+
+<!-- load the d3.js library -->
+<script src="{% static 'd3/d3.min.js' %}"></script>
+
+<script>
+
+// Set the dimensions of the canvas / graph
+var	margin = {top: 30, right: 50, bottom: 30, left: 50},
+	width = 800 - margin.left - margin.right,
+	height = 450 - margin.top - margin.bottom;
+
+// Set the ranges
+var	xScale = d3.scaleLinear().range([0, width]);
+var	yFloatScale = d3.scaleLinear().range([height, 0]);
+var	yNumScale = d3.scaleLinear().range([height, 0]);
+
+var numericLines = ['tp', 'tn', 'fp', 'fn'];
+var floatLines = ['precision', 'recall', 'fscore'];
+
+// Define the axes
+var	xAxis = d3.axisBottom(xScale).ticks(10);
+var	yFloatAxis = d3.axisLeft(yFloatScale).ticks(5);
+var yNumAxis = d3.axisRight(yNumScale).ticks(10);
+
+// Define the line
+{#var	extractPrecision = d3.line()#}
+{#	.x(function(d) { return xScale(d.date); })#}
+{#	.y(function(d) { return yFloatScale(d.precision); });#}
+
+{#var extractTp = d3.line()#}
+{#    .x(function(d) { return xScale(d.date); })#}
+{#    .y(function(d) { return yNumScale(d.tp); });#}
+
+// Adds the svg canvas
+var	chart1 = d3.select("#chart_div")
+	.append("svg")
+		.attr("width", width + margin.left + margin.right)
+		.attr("height", height + margin.top + margin.bottom)
+	.append("g")
+		.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+function extractColumnDataByName(columnName, data) {
+    if(floatLines.includes(columnName)){
+        var vvv = d3.line()
+            .x(function(d) { return xScale(d.threshold); })
+            .y(function(d) { return yFloatScale(d[columnName]); });
+    } else if (numericLines.includes(columnName)){
+        var vvv = d3.line()
+            .x(function(d) { return xScale(d.threshold); })
+            .y(function(d) { return yNumScale(d[columnName]); });
+    } else alert("Error: unknown column: " + columnName);
+    chart1.append("path")
+        .attr("class", "float_line " + columnName)
+        .attr("d", vvv(data));
+}
+
+
+
+{% if chart_file %}
+// Get the data
+{#d3.csv("{% static 'generated_scores.csv' %}", function(error, data) {#}
+{#    d3.text("{{ chart_file }}", function(error, data) {#}
+    var uuuu = 'http://127.0.0.1:8000/files/temp_stats/stats_1032173.csv';
+    d3.csv("{{ hostport }}/{{ chart_file }}", function(error, data) {
+        data.forEach(function(d) {
+    {#		d.threshold = +d.threshold;#}
+            Object.keys(d).forEach(function(key) {
+                var dkey = d[key];
+                if (dkey[dkey.length -1] === '*')
+                    dkey = dkey.substring(0, dkey.length-1);
+                d[key] = +dkey
+            });
+        });
+
+        // Scale the range of the data
+        xScale.domain(d3.extent(data, function(d) { return d.threshold; }));
+        yFloatScale.domain([0, 1]);
+        yNumScale.domain([0, d3.max(data, function(d) {
+            return d3.max(Object.values(d))
+        })]);
+
+        // Add paths
+    {#	chart1.append("path")#}
+    {#        .attr("class", "float_line precision")#}
+    {#		.attr("d", extractPrecision(data));#}
+
+        for (var i=0; i<data.columns.length; i++)
+            if (data.columns[i] !== 'threshold')
+                extractColumnDataByName(data.columns[i], data);
+
+        // Add axises
+        chart1.append("g")
+            .attr("class", "x_axis")
+            .attr("transform", "translate(0," + height + ")")
+            .call(xAxis);
+
+        chart1.append("g")
+            .attr("class", "y_axis_float")
+            .call(yFloatAxis);
+
+        // Right axis
+        chart1.append("g")
+            .attr("class", "y_axis_num")
+            .attr("transform", "translate(" + width + ", 0)")
+            .call(yNumAxis);
+
+        console.log("===");
+
+        divs = chart1.append("g")
+            .selectAll("li")
+            .data(data.columns)
+            .enter();
+
+        divs.append("rect")
+            .filter(function(d) { return d !== 'threshold' })
+            .attr("x", width - 10)
+            .attr("y", 4)
+            .attr("width", 10)
+            .attr("height", 10)
+            .style("fill", function(d) {
+                var sl = '.' + d;
+                var elem = document.querySelector(sl);
+                var style = window.getComputedStyle(elem, null);
+                return style.stroke;
+            })
+    {#        .attr("class", function(d) { return d; })#}
+            .attr("transform", function(d, i) {
+                return "translate(0, " + i * 20 + ")";
+            });
+
+        divs.append("text")
+            .filter(function(d) { return d !== 'threshold' })
+            .attr("x", width - 14)
+            .attr("y", 4+5 )
+            .attr("dy", ".35em")
+            .style("text-anchor", "end")
+            .text(function(d) { return d; })
+            .attr("transform", function(d, i) {
+                return "translate(0, " + i * 20 + ")";
+            })
+
+    });
+
+    d3.select("svg").on('mousemove', function () {
+        var coordinates = [0, 0];
+        coordinates = d3.mouse(this);
+
+        var xx = d3.event.pageX - this.getBoundingClientRect().x;
+    {#    console.log(xx);#}
+        var xi = xScale.invert(xx - margin.left);
+    {#    console.log(xi);#}
+
+        document.getElementById("myid").innerHTML = "X=" + xi.toFixed(2);
+    });
+
+{% endif %}
+
+</script>
+
+    </div>
+
+{% endblock %}

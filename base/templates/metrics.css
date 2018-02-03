@@ -1,0 +1,46 @@
+
+/*body { font: 12px Arial;}*/
+
+path {
+    stroke: steelblue;
+	stroke-width: 2;
+	fill: none;
+}
+
+.precision {
+    stroke: yellow;
+}
+
+.recall {
+    stroke: orange;
+}
+
+.fscore {
+    stroke: brown;
+}
+
+.tp {
+    stroke: green;
+}
+
+.tn {
+    stroke: lightgreen;
+}
+
+.fp {
+    stroke: blue;
+}
+
+.fn {
+    stroke: lightblue;
+}
+
+.x_axis path,
+.y_axis_float path,
+.y_axis_num path
+{
+	fill: none;
+	stroke: grey;
+	stroke-width: 1;
+	shape-rendering: crispEdges;
+}

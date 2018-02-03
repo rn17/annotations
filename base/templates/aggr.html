@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block body %}
+    <div class="container">
+        {% for lang, dd in ldata.items %}
+            <div class="row">
+                <div class="col">
+                    {{ lang }}
+                </div>
+            </div>
+            <div class="row">
+                <div class="col">
+                    Kappa: {{ dd.kappa }}
+                </div>
+                <div class="col">
+                    Kappa2: {{ dd.kappa2 }}
+                </div>
+                <div class="col">
+                    Jaccard: {{ dd.jaccard }}
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% endblock %}

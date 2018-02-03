@@ -1,0 +1,101 @@
+.not_selected_row {
+    background-color: whitesmoke;
+}
+
+.selected_row {
+    background-color: yellow;
+}
+
+.selected_row_222 {
+    background-color: lightgreen;
+}
+
+/*body, html {*/
+  /*width: 100%;*/
+  /*height: 100%;*/
+  /*margin: 0;*/
+/*}*/
+
+.container {
+  height: 100%;
+}
+
+html, body {
+    height:100%;
+}
+
+.left_collector {
+    width: 45%;
+    height: 100%;
+    float: left;
+    border-collapse: collapse;
+    /*max-height: 80vh;*/
+    /*display: table-cell;*/
+}
+
+.right_collector {
+    width: 45%;
+    height: 100%;
+    float: right;
+    border-collapse: collapse;
+    /*max-height: 80vh;*/
+    /*display: table-cell;*/
+}
+
+.main_xml_table {
+    overflow-y: scroll;
+    max-height: 75vh;
+    /*display: table-cell;*/
+}
+
+.secondary_xml_table {
+    overflow-y: scroll;
+    max-height: 75vh;
+    /*display: table-cell;*/
+}
+
+.annTag {
+    display: inline-block;
+    float: none;
+    padding: .375em .5em;
+    background: #2c87f0;
+    color: #fff;
+    margin: .1em .2em .1em .2em;
+    text-decoration: none;
+}
+
+/* Main table cell */
+.mainCell {
+    border: 2px solid gray;
+    padding-left: 5px;
+    padding-right: 5px;
+    margin: 0;
+}
+
+.secCell {
+    border: 2px solid gray;
+    padding-left: 5px;
+    padding-right: 5px;
+    margin: 0;
+}
+
+.assigned {
+    float: none;
+    text-align: right;
+}
+
+.tagsContainer {
+    float: none;
+    background-color: #c7ddef;
+    padding-left: 0;
+    padding-right: 0;
+}
+
+/*.button_submit {*/
+    /*display: block;*/
+    /*font-size: 3rem;*/
+    /*font-weight: 400;*/
+/*}*/
+
+
+

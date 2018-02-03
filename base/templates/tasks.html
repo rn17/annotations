@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+
+{% block body %}
+    <div class="container">
+        <div class="row">
+            <div class="col">
+
+                <ul class="nav nav-tabs">
+                    {% if not lang %}
+                        <li class="active">
+                    {% else %}
+                        <li>
+                    {% endif %}<a href="{% url 'base:task_list_view' %}">ALL</a></li>
+
+                    {% for l in langs %}
+                        {% if lang == l %}
+                            <li class="active">
+                        {% else %}
+                            <li>
+                        {% endif %}<a href="{% url 'base:task_list_view' %}?lang={{ l }}">{{ l }}</a></li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+        {% if object_list %}
+            <h3>All Tasks:</h3>
+
+            {% for task in object_list %}
+                <div class="row">
+                    <div class="col-xs-8" style="border:1px solid gray; margin-bottom: 1px">
+
+                        <h5>{{ task }}</h5>
+                        <h5>created by <a href="#">{{ task.creator.username }}</a>, {{ task.created }}</h5>
+                        <h5>1+{{ task.secondary_xmls.count }} xmls attached: {{ task.main_filename }}
+                            {% for sec_attach in task.secondary_xmls.all %},
+                                {{ sec_attach.sec_filename }}
+                            {% endfor %}
+                        </h5>
+                        <h5>Lang: <b>{{ task.language }}</b>, allowed
+                            <b>{% if task.is_third_allowed %}3{% else %}2{% endif %}</b> annotations
+                        </h5>
+
+                        {% if task.annotations.count > 0 %}
+                            {% for annotation in task.annotations.all %}
+                                <ul>
+                                    {% spaceless %}
+                                    <li><a href={% url "base:metrics_single" a_id=annotation.id %}>
+                                        Annotation#{{ annotation.id }}</a>
+                                        created {{ annotation.created }}
+                                        by <i>{{ annotation.annotator.username }} </i>
+                                        <a href="{% url "base:download_a" a_id=annotation.id %}">
+                                            <span class="glyphicon glyphicon-floppy-disk" aria-hidden="true"></span>
+                                        </a>
+                                    </li>
+                                    {% endspaceless %}
+                                </ul>
+                            {% endfor %}
+                        {% else %}
+                            <h5>NO ANNOTATIONS</h5>
+                        {% endif %}
+
+
+                        {% if task.can_accept_new_annotations and user.is_authenticated %}
+                            <a href="{% url 'base:add_annotation' a_id=task.id %}">
+                                <input class="btn {% if user.username in task.associated_usernames %}btn-success disabled{% else %}btn-success{% endif %}" type="button" value="Add Annotation" />
+                            </a>
+                        {% endif %}
+
+                        {% if manager %}
+                            <a href="{% url 'base:delete_task' t_id=task.id %}">
+                                <input class="btn btn-danger" type="button" value="Delete Task" />
+                            </a>
+                        {% endif %}
+
+                        {% if manager and not task.is_third_allowed and task.annotations.count <= 2 %}
+                            <a href="{% url 'base:allow3' task_id=task.id %}">
+                                <input class="btn btn-warning" type="button" value="Allow 3rd" />
+                            </a>
+                        {% endif %}
+
+                        <b></b>
+
+                        {% for score in task.scores.all %}
+                            <h5>Kappa*: <b>{{ score.kappa_score|floatformat:5 }}</b>,
+                                Kappa**: <b>{{ score.kappa2_score|floatformat:5 }}</b>,
+                                Jaccard: <b>{{ score.jaccard_score|floatformat:5 }}</b>
+                                (#{{ score.a1.id }}-#{{ score.a2.id }})
+                                <a href={% url "base:metrics_join" a1_id=score.a1.id a2_id=score.a2.id mode='u' %}>
+                                        Union stats</a>
+                                <a href={% url "base:metrics_join" a1_id=score.a1.id a2_id=score.a2.id mode='i' %}>
+                                        Intersection stats</a>
+                            </h5>
+                        {% endfor %}
+                        <b></b>
+                    </div>
+                </div>
+
+            {% endfor %}
+
+        {% else %}
+            <div class="row">
+                <div class="col">
+                    <h3>You don't have any tasks</h3>
+                </div>
+            </div>
+        {% endif %}
+
+        <br/>
+
+        <div class="row">
+            <div class="col">
+                <ul class="pagination" >
+                    {% if page_obj.has_previous %}
+                        {% if lang %}
+                            <li class="page-item">
+                                <a href="{{ request.path }}?page={{ page_obj.previous_page_number }}&lang={{ lang }}">previous
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="page-item">
+                                <a href="{{ request.path }}?page={{ page_obj.previous_page_number }}">previous
+                                </a>
+                            </li>
+                        {% endif %}
+                    {% endif %}
+
+                    <li class="page-item active"><a class="page-link" href="#">
+                        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                    </a></li>
+
+                    {% if page_obj.has_next %}
+                        {% if lang %}
+                            <li class="page-item">
+                                <a href="{{ request.path }}?page={{ page_obj.next_page_number }}&lang={{ lang }}">next
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="page-item">
+                                <a href="{{ request.path }}?page={{ page_obj.next_page_number }}">next
+                                </a>
+                            </li>
+                        {% endif %}
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+
+    </div>
+
+{% endblock %}
